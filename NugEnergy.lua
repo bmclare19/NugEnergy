@@ -1,11 +1,10 @@
 local _, ns = ...
 
--- API locals (and polyfills)
-local unpack = unpack
+-- API locals
 local UnitClass = UnitClass
 local UnitPowerMax = UnitPowerMax
 
--- STATES
+-- States
 local ST_ACTIVE = 1
 local ST_IDLE = 2
 
@@ -13,6 +12,7 @@ local ST_IDLE = 2
 local _state = {
     isEnabled = false,
     playerClass = nil,
+    filterUnit = "player",
     isRogueOrDruid = nil,
     powerType = nil,
     maxPower = nil,
@@ -24,7 +24,8 @@ local _state = {
     wasJustEnabled = false,
     forceShow = false,
     isInCombat = false,
-    isStealthed = false
+    isStealthed = false,
+    isInVehicle = false
 }
 
 local stateListeners = {}
@@ -104,20 +105,20 @@ function NugEnergy:UNIT_HEALTH()
     state.targetHealthPercent = unitHealth / maxHealth
 end
 
-function NugEnergy:UNIT_DISPLAYPOWER()
-    state.powerType = UnitPowerType("player")
-    self:UNIT_MAXPOWER()
+function NugEnergy:UNIT_DISPLAYPOWER(unit)
+    state.powerType = UnitPowerType(unit)
+    self:UNIT_MAXPOWER(unit)
 end
 
-function NugEnergy:UNIT_MAXPOWER()
-    state.maxPower = UnitPowerMax("player", state.powerType)
+function NugEnergy:UNIT_MAXPOWER(unit)
+    state.maxPower = UnitPowerMax(unit, state.powerType)
     self.statusBar:SetMinMaxValues(0, state.maxPower)
     -- call this so we don't have to duplicate the code updating power state
-    self:UNIT_POWER_FREQUENT()
+    self:UNIT_POWER_FREQUENT(unit)
 end
 
-function NugEnergy:UNIT_POWER_FREQUENT()
-    state.currentPower = UnitPower("player", state.powerType)
+function NugEnergy:UNIT_POWER_FREQUENT(unit)
+    state.currentPower = UnitPower(unit, state.powerType)
     state.currentPowerPercent = state.currentPower / state.maxPower
 
     self.statusBar:SetValue(state.currentPower)
@@ -130,8 +131,8 @@ function NugEnergy:UNIT_POWER_FREQUENT()
     end
 end
 
-function NugEnergy:UNIT_POWER_UPDATE()
-    self:UNIT_POWER_FREQUENT()
+function NugEnergy:UNIT_POWER_UPDATE(unit)
+    self:UNIT_POWER_FREQUENT(unit)
 end
 
 function NugEnergy:UPDATE_STEALTH()
@@ -139,19 +140,42 @@ function NugEnergy:UPDATE_STEALTH()
     self:UpdateVisibility()
 end
 
+function NugEnergy:UNIT_ENTERED_VEHICLE()
+    state.isInVehicle = true
+    -- Set isPowerFull to false so that we update visibility in UNIT_POWER_FREQUENT
+    state.isPowerFull = false
+    state.filterUnit = "vehicle"
+    self:UNIT_DISPLAYPOWER("vehicle")
+end
+
+function NugEnergy:UNIT_EXITED_VEHICLE()
+    state.isInVehicle = false
+    -- Set isPowerFull to false so that we update visibility in UNIT_POWER_FREQUENT
+    state.isPowerFull = false
+    state.filterUnit = "player"
+    self:UNIT_DISPLAYPOWER("player")
+end
+
 -- END EVENTS
 
 function NugEnergy:CreateFilterUnitEventHandler(filterUnit)
+    local cb = type(filterUnit) == "function" and filterUnit or function (unit)
+         return unit == filterUnit
+        end
     return function(event, ...)
         local unit = ...
-        if (unit and unit == filterUnit) then
+        if (unit and cb(unit)) then
             self[event](self, ...)
         end
     end
 end
 
-function NugEnergy:RegisterUnitEvent(event, unit)
-    self:RegisterEvent(event, self:CreateFilterUnitEventHandler(unit))
+function NugEnergy:RegisterUnitEvent(event, ...)
+    self:RegisterEvent(event, self:CreateFilterUnitEventHandler(...))
+end
+
+function NugEnergy:RegisterFilterUnitEvent(event)
+    self:RegisterUnitEvent(event, function (unit) return unit == state.filterUnit end)
 end
 
 function NugEnergy:OnInitialize()
@@ -176,16 +200,21 @@ function NugEnergy:OnEnable()
     self:RegisterEvent("PLAYER_REGEN_DISABLED")
     self:RegisterEvent("PLAYER_TARGET_CHANGED")
     self:RegisterUnitEvent("UNIT_HEALTH", "target")
-    self:RegisterUnitEvent("UNIT_DISPLAYPOWER", "player")
-    self:RegisterUnitEvent("UNIT_MAXPOWER", "player")
-    self:RegisterUnitEvent("UNIT_POWER_UPDATE", "player")
-    self:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
+    self:RegisterFilterUnitEvent("UNIT_DISPLAYPOWER")
+    self:RegisterFilterUnitEvent("UNIT_MAXPOWER")
+    self:RegisterFilterUnitEvent("UNIT_POWER_UPDATE")
+    self:RegisterFilterUnitEvent("UNIT_POWER_FREQUENT")
+    self:RegisterUnitEvent("UNIT_ENTERED_VEHICLE", "player")
+    self:RegisterUnitEvent("UNIT_EXITED_VEHICLE", "player")
 
     if (state.isRogueOrDruid) then
         self:RegisterEvent("UPDATE_STEALTH")
     end
 
-    self:UNIT_DISPLAYPOWER()
+    state.isInVehicle = UnitInVehicle("player")
+    state.filterUnit = state.isInVehicle and "vehicle" or "player"
+
+    self:UNIT_DISPLAYPOWER(state.filterUnit)
     self:UPDATE_STEALTH()
 
     state.isEnabled = true
@@ -203,7 +232,12 @@ function NugEnergy:OnDisable()
 end
 
 function NugEnergy:ShouldShow()
-    return state.wasJustEnabled or state.forceShow or state.isInCombat or state.isStealthed or (not state.isPowerFull)
+    return (state.wasJustEnabled or
+        state.forceShow or
+        state.isInCombat or
+        state.isStealthed or
+        (not state.isPowerFull) or
+        state.isInVehicle)
 end
 
 function NugEnergy:GetShowState()

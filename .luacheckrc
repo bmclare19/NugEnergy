@@ -78,6 +78,7 @@ globals = {
     "UnitExists",
     "UnitHealth",
     "UnitHealthMax",
+    "UnitInVehicle",
     "UnitPower",
     "UnitPowerMax",
     "UnitPowerType",

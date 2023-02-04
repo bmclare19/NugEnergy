@@ -1,8 +1,12 @@
 local NugEnergy = _G.NugEnergy
 
+-- API locals
+local string_gmatch = string.gmatch
+local string_match = string.match
+
 local _parseOptions = function(str)
     local fields = {}
-    for opt, args in string.gmatch(str, "(%w*)%s*=%s*([%w%,%-%_%.%:%\\%']+)") do
+    for opt, args in string_gmatch(str, "(%w*)%s*=%s*([%w%,%-%_%.%:%\\%']+)") do
         fields[opt:lower()] = tonumber(args) or args
     end
     return fields
@@ -57,7 +61,7 @@ SLASH_NUGENERGY1 = "/nugenergy"
 SLASH_NUGENERGY2 = "/nen"
 
 function SlashCmdList.NUGENERGY(message)
-    local cmd, args = string.match(message, "([%w%+%-%=]+) ?(.*)")
+    local cmd, args = string_match(message, "([%w%+%-%=]+) ?(.*)")
     if (not cmd or cmd == "help") then
         print("Usage:")
         for _, v in ipairs(helpMessage) do

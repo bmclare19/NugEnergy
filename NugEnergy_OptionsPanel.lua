@@ -8,32 +8,42 @@ local LSM = LibStub("LibSharedMedia-3.0")
 
 -- API locals
 local unpack = unpack
+local math_floor = math.floor
+local string_match = string.match
+local GetScreenWidth = GetScreenWidth
+local GetScreenHeight = GetScreenHeight
 
 -- Locals
-local screenWidth = floor(GetScreenWidth())
-local screenHeight = floor(GetScreenHeight())
+local screenWidth = math_floor(GetScreenWidth())
+local screenHeight = math_floor(GetScreenHeight())
 
+-- Dropdown constants
 local STRATA_VALUES = {
-    ["BACKGROUND"] = L.BACKGROUND_UC,
-    ["LOW"] = L.LOW_UC,
-    ["MEDIUM"] = L.MEDIUM_UC,
-    ["HIGH"] = L.HIGH_UC,
-    ["DIALOG"] = L.DIALOG_UC,
-    ["FULLSCREEN"] = L.FULLSCREEN_UC,
-    ["FULLSCREEN_DIALOG"] = L.FULLSCREEN_DIALOG_UC,
-    ["TOOLTIP"] = L.TOOLTIP_UC
+    ["BACKGROUND"] = "BACKGROUND",
+    ["LOW"] = "LOW",
+    ["MEDIUM"] = "MEDIUM",
+    ["HIGH"] = "HIGH",
+    ["DIALOG"] = "DIALOG",
+    ["FULLSCREEN"] = "FULLSCREEN",
+    ["FULLSCREEN_DIALOG"] = "FULLSCREEN_DIALOG",
+    ["TOOLTIP"] = "TOOLTIP"
 }
 
 local POINT_VALUES = {
-    ["CENTER"] = L.CENTER_UC,
-    ["LEFT"] = L.LEFT_UC,
-    ["RIGHT"] = L.RIGHT_UC,
-    ["TOP"] = L.TOP_UC,
-    ["TOPLEFT"] = L.TOPLEFT_UC,
-    ["TOPRIGHT"] = L.TOPRIGHT_UC,
-    ["BOTTOM"] = L.BOTTOM_UC,
-    ["BOTTOMLEFT"] = L.BOTTOMLEFT_UC,
-    ["BOTTOMRIGHT"] = L.BOTTOMRIGHT_UC
+    ["CENTER"] = "CENTER",
+    ["LEFT"] = "LEFT",
+    ["RIGHT"] = "RIGHT",
+    ["TOP"] = "TOP",
+    ["TOPLEFT"] = "TOPLEFT",
+    ["TOPRIGHT"] = "TOPRIGHT",
+    ["BOTTOM"] = "BOTTOM",
+    ["BOTTOMLEFT"] = "BOTTOMLEFT",
+    ["BOTTOMRIGHT"] = "BOTTOMRIGHT"
+}
+
+local ORIENTATION_VALUES = {
+    ["HORIZONTAL"] = "HORIZONTAL",
+    ["VERTICAL"] = "VERTICAL",
 }
 
 local _get = function(transformer)
@@ -43,7 +53,7 @@ local _get = function(transformer)
     return function(info)
         local temp = NugEnergy.db.profile
         for _, v in ipairs(info) do
-            local match = string.match(v, "^noarg_")
+            local match = string_match(v, "^noarg_")
             if (match == nil) then
                 temp = temp[v]
             end
@@ -60,7 +70,7 @@ local _set = function(transformer, onupdate)
         local temp = NugEnergy.db.profile
         for i = 1, #info - 1 do
             local v = info[i]
-            local match = string.match(v, "^noarg_")
+            local match = string_match(v, "^noarg_")
             if (match == nil) then
                 temp = temp[v]
             end
@@ -161,10 +171,7 @@ local SETTINGS_CONFIG = {
                             type = "select",
                             order = 5,
                             name = L.ORIENTATION,
-                            values = {
-                                ["HORIZONTAL"] = L.HORIZONTAL_UC,
-                                ["VERTICAL"] = L.VERTICAL_UC
-                            },
+                            values = ORIENTATION_VALUES,
                             style = "dropdown"
                         },
                         noarg_Colors = {
@@ -407,10 +414,10 @@ local SETTINGS_CONFIG = {
                                     order = 3,
                                     name = L.FONT_STYLE,
                                     values = {
-                                        [""] = L.NONE_UC,
-                                        ["OUTLINE"] = L.OUTLINE_UC,
-                                        ["THICKOUTLINE"] = L.THICKOUTLINE_UC,
-                                        ["MONOCHROME"] = L.MONOCHROME_UC
+                                        [""] = "NONE",
+                                        ["OUTLINE"] = "OUTLINE",
+                                        ["THICKOUTLINE"] = "THICKOUTLINE",
+                                        ["MONOCHROME"] = "MONOCHROME"
                                     },
                                     style = "dropdown"
                                 },
